@@ -6,71 +6,108 @@
 /*   By: aconta <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/12/01 09:33:01 by aconta            #+#    #+#             */
-/*   Updated: 2022/12/11 14:29:34 by aconta           ###   ########.fr       */
+/*   Updated: 2022/12/14 09:13:01 by aconta           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 #include "get_next_line.h"
 
-char	*free_joined_save(char *save, char *buf)
+char    *read_the_file(int fd, char *save)
 {
-	char	*remaining;
+        char    *buf;
+        int             read_bytes;
 
-	if (!save)
-	{
-		save = malloc(sizeof (char));
-		if (!save)
-			return (NULL);
-	}
-	remaining = ft_strjoin(save, buf);
-	free(save);
-	return (remaining);
+        buf = malloc(sizeof (char) *(BUFFER_SIZE + 1));
+        if (!buf)
+                return (NULL);
+        read_bytes = 1;
+        while (!ft_strchr(save, '\n') && read_bytes != 0)
+        {
+                read_bytes = read(fd, buf, BUFFER_SIZE);
+                if (read_bytes == -1)
+                {
+                        free(buf);
+                        return (NULL);
+                }
+                buf[read_bytes] = '\0';
+                save = ft_strjoin(save, buf);
+        }
+        free(buf);
+        return (save);
+}
+ char    *get_a_line(char *save)
+{
+        int             i;
+        char    *potential_line;
+
+        i = 0;
+        if (!save)
+                return (NULL);
+        while (save[i] != '\n' && save[i])
+                i++;
+        potential_line = (char *)malloc(sizeof(*potential_line) * (i + 2));
+        if (!potential_line)
+                return (NULL);
+        i = -1;
+        while (save[++i] != '\n' && save[i])
+                potential_line[i] = save[i];
+        if (save[i] == '\n')
+        {
+                potential_line[i] = '\n';
+                i++;
+        }
+        potential_line[i] = '\0';
+        return (potential_line);
 }
 
-char	*get_a_line(int fd, char *save)
+char    *save_after_newline(char *save)
 {
-	char	*buf;
-	int		read_bytes;
+        char    *newsave;
+        int             i;
+        int             j;
 
-	buf = malloc(sizeof (char) *(BUFFER_SIZE + 1));
-	if (!buf)
-		return (NULL);
-	read_bytes = 1;
-	while (read_bytes != 0)
-	{
-		read_bytes = read(fd, buf, BUFFER_SIZE);
-		if (read_bytes == -1 || read_bytes == 0)
-		{
-			free(buf);
-			return (NULL);
-		}
-		buf[read_bytes] = '\0';
-		save = free_joined_save(save, buf);
-		if (find_index(save, '\n') >= 0)
-			break ;
-	}
-	free(buf);
-	return (save);
+        i = 0;
+        while (save[i] != '\n' && save[i])
+                i++;
+        if (!save[i])
+        {
+                free(save);
+                return (NULL);
+        }
+        newsave = malloc(sizeof (char) * (ft_strlen(save) - i + 1));
+        if (!newsave)
+                return (NULL);
+        i++;
+        j = 0;
+        while (save[i])
+                newsave[j++] = save[i++];
+        newsave[j] = '\0';
+        free(save);
+        return (newsave);
 }
 
-char	*get_next_line(int fd)
+char    *get_next_line(int fd)
 {
-	char		*line;
-	static char	*save;
-	int			i;
+        static char     *save;
+        char            *line;
 
-	if (BUFFER_SIZE <= 0 || fd < 0 || read(fd, 0, 0) < 0)
-		return (NULL);
-	save = get_a_line(fd, save);
-	if (!save)
-		return (NULL);
-	i = find_index(save, '\n');
-	if (i < 0)
-		return (NULL);
-	line = ft_substr(save, 0, i + 1);
-	if (!line)
-		return (NULL);
-	save = ft_substr(save, i + 1, (find_index(save, '\0') - i));
-	if (ft_strlen(save) == 0 && save)
-		free(save);
-	return (line);
+        if (fd < 0 || BUFFER_SIZE <= 0)
+                return (NULL);
+        save = read_the_file(fd, save);
+        if (!save)
+        {
+                return (NULL);
+        }
+        line = get_a_line(save);
+        save = save_after_newline(save);
+        if (!line)
+        {
+                free(line);
+                return (NULL);
+        }
+        if (ft_strlen(line) == 0)
+        {
+                free(line);
+                return (NULL);
+        }
+        return (line);
 }
